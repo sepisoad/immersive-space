@@ -10,7 +10,7 @@ clean:
 
 copy:
 	mkdir build
-	cp -r static/ build/
+	cp -r static/* build/
 
 build:
 	elm make src/Main.elm --output=build/elm.js
@@ -21,6 +21,11 @@ rebuild:
 	elm make src/Main.elm --output=build/elm.js
 
 live:
+	$(MAKE) clean
+	$(MAKE) copy
+	elm-live src/Main.elm --pushstate --host=192.168.5.125 --port=1987 --start-page=index.html --dir=build -- --output=build/elm.js
+
+live-local:
 	$(MAKE) clean
 	$(MAKE) copy
 	elm-live src/Main.elm --pushstate --port=1987 --start-page=index.html --dir=build -- --output=build/elm.js
