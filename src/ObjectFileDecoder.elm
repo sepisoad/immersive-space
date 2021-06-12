@@ -15,7 +15,6 @@ import Array exposing (Array)
 import Debug exposing (..)
 import Maybe exposing (Maybe(..))
 import Parser exposing (..)
-import Tuple3 as T3
 
 
 type alias Normal =
@@ -68,11 +67,6 @@ type Face
         }
 
 
-faceIndices : Int -> Int -> Int -> ( Int, Int, Int )
-faceIndices a b c =
-    ( a, b, c )
-
-
 makeFace : Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int -> Face
 makeFace a1 a2 a3 b1 b2 b3 c1 c2 c3 =
     case [ a1, a2, a3, b1, b2, b3, c1, c2, c3 ] of
@@ -111,65 +105,8 @@ type alias Triangle =
     }
 
 
-makeTriangle : Maybe Position -> Maybe Position -> Maybe Position -> Maybe UV -> Maybe UV -> Maybe UV -> Maybe Normal -> Maybe Normal -> Maybe Normal -> Triangle
-makeTriangle p1 p2 p3 u1 u2 u3 n1 n2 n3 =
-    let
-        mlpos =
-            case ( p1, p2, p3 ) of
-                ( Just vp1, Just vp2, Just vp3 ) ->
-                    Just ( vp1, vp2, vp3 )
-
-                _ ->
-                    Nothing
-
-        mluv =
-            case ( u1, u2, u3 ) of
-                ( Just vu1, Just vu2, Just vu3 ) ->
-                    Just ( vu1, vu2, vu3 )
-
-                _ ->
-                    Nothing
-
-        mlnor =
-            case ( n1, n2, n3 ) of
-                ( Just vn1, Just vn2, Just vn3 ) ->
-                    Just ( vn1, vn2, vn3 )
-
-                _ ->
-                    Nothing
-    in
-    Triangle mlpos mluv mlnor
-
-
-
---type alias Quad =
---    { a : Triangle, b : Triangle }
---makeQuad : Maybe Triangle -> Maybe Triangle -> Maybe Quad
---makeQuad ma mb =
---    case ( ma, mb ) of
---        ( Just va, Just vb ) ->
---            Just (Quad va vb)
---        _ ->
---            Nothing
-
-
 type alias Mesh =
     List Triangle
-
-
-
---makeMesh : List (Maybe Quad) -> List Quad
---makeMesh lmq =
---    List.foldr
---        (\item arr ->
---            case item of
---                Just v ->
---                    List.append [ v ] arr
---                _ ->
---                    arr
---        )
---        []
---        lmq
 
 
 empty : Mesh
@@ -316,11 +253,6 @@ type ParsedValue
     | NoValue
 
 
-parse : String -> Result (List DeadEnd) Face
-parse line =
-    run parseFace line
-
-
 load : String -> Mesh
 load data =
     let
@@ -337,9 +269,6 @@ load data =
                             , map (\v -> NormalValue v) parseNormal
                             , map (\v -> UVValue v) parseUV
                             , map (\v -> NoValue) whateverEles
-
-                            --, map (\v -> NoValue) (chompUntilEndOr "\n")
-                            --, map (\v -> NoValue) (chompUntilEndOr "g")
                             ]
                         )
                         line
@@ -395,13 +324,6 @@ load data =
             \i ->
                 Maybe.withDefault emptyUV (Array.get (dec i) rawMeshes.uvs)
 
-        --fixTupIndex =
-        --    \tup3 ->
-        --        T3.mapAllThree
-        --            dec
-        --            dec
-        --            dec
-        --            tup3
         triangleArr =
             Array.map
                 (\face ->

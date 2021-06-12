@@ -1,12 +1,10 @@
 module Model3D exposing (..)
 
 import Debug exposing (..)
-import Math.Matrix4 as Mat4 exposing (Mat4)
-import Math.Vector2 as Vec2 exposing (Vec2)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Maybe exposing (Maybe(..), withDefault)
+import Math.Matrix4 exposing (Mat4)
+import Math.Vector3 exposing (Vec3, vec3)
+import Maybe exposing (Maybe(..))
 import ObjectFileDecoder as Obj3D
-import Utils as U
 import WebGL as GL
 
 
