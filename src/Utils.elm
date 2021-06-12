@@ -4,7 +4,6 @@ import Http
 import Math.Matrix4 as M4
 import Math.Vector3 as V3
 import Maybe exposing (Maybe(..))
-import Object3D as Obj3D
 
 
 makeCamera : M4.Mat4

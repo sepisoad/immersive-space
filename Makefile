@@ -29,3 +29,9 @@ live-local:
 	$(MAKE) clean
 	$(MAKE) copy
 	elm-live src/Main.elm --pushstate --port=1987 --start-page=index.html --dir=build -- --output=build/elm.js
+
+install-elm-lang-server:
+	npm install -g @elm-tooling/elm-language-server
+
+# start-elm-lang-server:
+# 	
