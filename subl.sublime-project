@@ -1,0 +1,10 @@
+{
+	"folders":
+	[
+		{
+      "path": ".",
+      "folder_exclude_patterns": ["elm-stuff", "build"],
+      "file_exclude_patterns": ["*.sublime*"],
+		}
+	]
+}
