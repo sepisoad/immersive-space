@@ -32,6 +32,3 @@ live-local:
 
 install-elm-lang-server:
 	npm install -g @elm-tooling/elm-language-server
-
-# start-elm-lang-server:
-# 	

@@ -3,16 +3,14 @@ module Main exposing (main)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Debug exposing (..)
-import Html exposing (Html, button, div, text)
+import Html exposing (Html)
 import Html.Attributes exposing (height, style, width)
-import Html.Events exposing (onClick)
 import Http
 import Math.Matrix4 as M4
 import Math.Vector3 as V3
 import Object3D as Obj3D
 import Objects.Cube as Cube3D
 import Objects.Sphere as Sphere3D
-import Task
 import Utils as U
 import WebGL as GL
 
@@ -56,7 +54,7 @@ init =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     onAnimationFrameDelta (\_ -> Ticked)
 
 
@@ -109,7 +107,7 @@ update action model =
 
                 Err httpError ->
                     let
-                        log_ =
+                        _ =
                             log "" httpError
                     in
                     ( model, Cmd.none )
@@ -125,14 +123,14 @@ update action model =
 
                 Err httpError ->
                     let
-                        log_ =
+                        _ =
                             log "" httpError
                     in
                     ( model, Cmd.none )
 
 
 view : Model -> Html Msg
-view { theta, lightLocation, cube, sphere } =
+view { lightLocation, cube, sphere } =
     let
         camera =
             U.makeCamera

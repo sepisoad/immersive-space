@@ -1,12 +1,10 @@
 module Objects.Sphere exposing (render)
 
 import Debug exposing (..)
-import Math.Matrix4 as Mat4 exposing (Mat4)
-import Math.Vector2 as Vec2 exposing (Vec2)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Maybe exposing (Maybe(..), withDefault)
+import Math.Matrix4 exposing (Mat4)
+import Math.Vector3 exposing (Vec3, vec3)
+import Maybe exposing (Maybe(..))
 import Object3D as Obj3D
-import Objects.Utils as U
 import WebGL as GL
 
 
