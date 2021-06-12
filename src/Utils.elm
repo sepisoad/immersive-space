@@ -4,13 +4,7 @@ import Http
 import Math.Matrix4 as M4
 import Math.Vector3 as V3
 import Maybe exposing (Maybe(..))
-
-
-makeCamera : M4.Mat4
-makeCamera =
-    M4.mul
-        (M4.makePerspective 45 1 0.01 100)
-        (M4.makeLookAt (V3.vec3 0 0 10) (V3.vec3 0 0 0) (V3.vec3 0 1 0))
+import ObjectFileDecoder as Obj3D
 
 
 updateLightLocation : Float -> Float -> Float -> V3.Vec3
@@ -18,9 +12,9 @@ updateLightLocation x y z =
     V3.vec3 x y z
 
 
-updateLightColor : V3.Vec3
-updateLightColor =
-    V3.vec3 0.5 1 0.5
+updateLightColor : Float -> Float -> Float -> V3.Vec3
+updateLightColor r g b =
+    V3.vec3 r g b
 
 
 load3DObject : String -> (Result Http.Error String -> msg) -> Cmd msg
@@ -34,3 +28,18 @@ load3DObject url m =
 degToRad : Float -> Float
 degToRad deg =
     deg * (pi / 180)
+
+
+globalPerspective : V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Int -> Int -> (V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> M4.Mat4)
+globalPerspective eye center up width height =
+    \position scale rotation ->
+        List.foldr M4.mul
+            M4.identity
+            [ M4.makePerspective 45 1 0.01 100
+            , M4.makeLookAt eye center up
+            , M4.makeTranslate position
+            , M4.makeScale scale
+            , M4.makeRotate (V3.getX rotation) V3.i
+            , M4.makeRotate (V3.getY rotation) V3.j
+            , M4.makeRotate (V3.getZ rotation) V3.k
+            ]
