@@ -4,7 +4,6 @@ import Http
 import Math.Matrix4 as M4
 import Math.Vector3 as V3
 import Maybe exposing (Maybe(..))
-import ObjectFileDecoder as Obj3D
 
 
 updateLightLocation : Float -> Float -> Float -> V3.Vec3
@@ -31,7 +30,7 @@ degToRad deg =
 
 
 globalPerspective : V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Int -> Int -> (V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> M4.Mat4)
-globalPerspective eye center up width height =
+globalPerspective eye center up _ _ =
     \position scale rotation ->
         List.foldr M4.mul
             M4.identity

@@ -31,7 +31,7 @@ type alias Uniforms =
 
 
 cretaeGLMesh : Obj3D.Mesh -> Vec3 -> GL.Mesh Vertex
-cretaeGLMesh mesh position =
+cretaeGLMesh mesh _ =
     let
         vertices =
             List.foldr
@@ -43,9 +43,8 @@ cretaeGLMesh mesh position =
                         maybeNormal =
                             triangle.normal
 
-                        maybeUV =
-                            triangle.uv
-
+                        --maybeUV =
+                        --    triangle.uv
                         vertex =
                             case ( maybePosition, maybeNormal ) of
                                 ( Just pos, Just normal ) ->

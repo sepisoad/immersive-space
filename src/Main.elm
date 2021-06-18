@@ -5,7 +5,7 @@ import Browser.Events exposing (onAnimationFrameDelta)
 import Debug exposing (..)
 import Html exposing (Attribute, Html)
 import Html.Attributes exposing (height, style, width)
-import Html.Events as HE exposing (onClick)
+import Html.Events as HE
 import Http
 import Json.Decode as JD
 import Math.Vector3 as V3
@@ -22,6 +22,7 @@ type alias Model =
     , cube : Obj3D.Mesh
     , pointer : { x : Float, y : Float }
     , size : { w : Int, h : Int }
+    , zoom : Float
     }
 
 
@@ -30,6 +31,7 @@ type Msg
     | Sphere3DLoaded (Result Http.Error String)
     | Cube3DLoaded (Result Http.Error String)
     | PointerMoved Int Int
+    | ZoomChanged Float
 
 
 main : Program () Model Msg
@@ -51,15 +53,16 @@ init =
         Obj3D.empty
         { x = 0, y = 0 }
         { w = 400, h = 400 }
+        5
     , Cmd.batch
-        [ U.load3DObject "3d-models/sphere.txt" Sphere3DLoaded
+        [ U.load3DObject "3d-models/triangle.txt" Sphere3DLoaded
         , U.load3DObject "3d-models/cube.txt" Cube3DLoaded
         ]
     )
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     onAnimationFrameDelta (\_ -> Ticked)
 
 
@@ -110,11 +113,7 @@ update action model =
                     in
                     ( { model | sphere = obj3d }, Cmd.none )
 
-                Err httpError ->
-                    let
-                        log_ =
-                            log "" httpError
-                    in
+                Err _ ->
                     ( model, Cmd.none )
 
         Cube3DLoaded result ->
@@ -126,22 +125,48 @@ update action model =
                     in
                     ( { model | cube = obj3d }, Cmd.none )
 
-                Err httpError ->
-                    let
-                        log_ =
-                            log "" httpError
-                    in
+                Err _ ->
                     ( model, Cmd.none )
 
         PointerMoved px py ->
             let
-                pointer =
-                    { x = (toFloat -px / toFloat model.size.w) + 0.5, y = (toFloat -py / toFloat model.size.h) + 0.5 }
+                newX =
+                    ((toFloat px * model.zoom) / toFloat model.size.w) - (model.zoom / 2)
 
-                log_ =
-                    log "[x,y]" pointer
+                newY =
+                    ((toFloat -py * model.zoom) / toFloat model.size.h) + (model.zoom / 2)
+
+                pointer =
+                    { x = newX, y = newY }
             in
             ( { model | pointer = pointer }, Cmd.none )
+
+        ZoomChanged delta ->
+            let
+                _ =
+                    log "" delta
+
+                zoom =
+                    if delta >= 1 then
+                        model.zoom + 1
+
+                    else if delta <= -1 then
+                        model.zoom - 1
+
+                    else
+                        model.zoom
+
+                capZoom =
+                    if zoom > 20 then
+                        20
+
+                    else if zoom < -9 then
+                        -9
+
+                    else
+                        zoom
+            in
+            ( { model | zoom = capZoom }, Cmd.none )
 
 
 onMouseMove : (Int -> Int -> Msg) -> Attribute Msg
@@ -155,15 +180,26 @@ onMouseMove msg =
     HE.on "mousemove" decoder
 
 
-view : Model -> Html Msg
-view { theta, lightLocation, sphere, cube, pointer, size } =
+onMouseWheel : (Float -> Msg) -> Attribute Msg
+onMouseWheel msg =
     let
-        lightColor1 =
-            U.updateLightColor 0.5 1 0.5
+        decoder =
+            JD.map msg
+                (JD.field "deltaY" JD.float)
 
-        lightColor2 =
-            U.updateLightColor 1 1 0.5
+        attrMsg =
+            HE.on "wheel" decoder
+    in
+    attrMsg
 
+
+view : Model -> Html Msg
+view { theta, lightLocation, sphere, cube, pointer, size, zoom } =
+    let
+        --lightColor1 =
+        --    U.updateLightColor 0.5 1 0.5
+        --lightColor2 =
+        --    U.updateLightColor 1 1 0.5
         lightColor3 =
             U.updateLightColor 1 0 0
 
@@ -182,20 +218,20 @@ view { theta, lightLocation, sphere, cube, pointer, size } =
     GL.toHtml
         [ width size.w
         , height size.h
-
-        --, style "display" "block"
+        , style "display" "block"
         , style "borderStyle" "solid"
         , style "borderColor" "blue"
         , onMouseMove PointerMoved
+        , onMouseWheel ZoomChanged
         ]
         [ -- pointer
           M3D.render
             -- shape
             sphere
             -- position
-            (V3.vec3 pointer.x pointer.y 0)
+            (V3.vec3 pointer.x pointer.y zoom)
             -- scale
-            (V3.vec3 0.1 0.1 0.1)
+            (V3.vec3 1 1 1)
             -- rotation
             (V3.vec3 0 0 0)
             lightLocation

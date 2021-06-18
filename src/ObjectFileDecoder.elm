@@ -268,7 +268,7 @@ load data =
                             , map (\v -> PositionValue v) parsePosition
                             , map (\v -> NormalValue v) parseNormal
                             , map (\v -> UVValue v) parseUV
-                            , map (\v -> NoValue) whateverEles
+                            , map (\_ -> NoValue) whateverEles
                             ]
                         )
                         line
@@ -282,7 +282,7 @@ load data =
                         Ok value ->
                             value
 
-                        Err msg ->
+                        Err _ ->
                             NoValue
                 )
                 resultList
@@ -360,9 +360,9 @@ load data =
                                             )
                                         )
                                         (Just
-                                            ( getUV p1
-                                            , getUV p2
-                                            , getUV p3
+                                            ( getUV u1
+                                            , getUV u2
+                                            , getUV u3
                                             )
                                         )
                                         Nothing
@@ -412,9 +412,9 @@ load data =
                                             )
                                         )
                                         (Just
-                                            ( getUV p1
-                                            , getUV p2
-                                            , getUV p3
+                                            ( getUV u1
+                                            , getUV u2
+                                            , getUV u3
                                             )
                                         )
                                         (Just
