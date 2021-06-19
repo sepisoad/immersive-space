@@ -53,9 +53,9 @@ init =
         Obj3D.empty
         { x = 0, y = 0 }
         { w = 400, h = 400 }
-        5
+        2
     , Cmd.batch
-        [ U.load3DObject "3d-models/triangle.txt" Sphere3DLoaded
+        [ U.load3DObject "3d-models/axis.txt" Sphere3DLoaded
         , U.load3DObject "3d-models/cube.txt" Cube3DLoaded
         ]
     )
@@ -131,7 +131,7 @@ update action model =
         PointerMoved px py ->
             let
                 newX =
-                    ((toFloat px * model.zoom) / toFloat model.size.w) - (model.zoom / 2)
+                    ((toFloat -px * model.zoom) / toFloat model.size.w) + (model.zoom / 2)
 
                 newY =
                     ((toFloat -py * model.zoom) / toFloat model.size.h) + (model.zoom / 2)
@@ -160,8 +160,8 @@ update action model =
                     if zoom > 20 then
                         20
 
-                    else if zoom < -9 then
-                        -9
+                    else if zoom < 1 then
+                        1
 
                     else
                         zoom
@@ -196,15 +196,11 @@ onMouseWheel msg =
 view : Model -> Html Msg
 view { theta, lightLocation, sphere, cube, pointer, size, zoom } =
     let
-        --lightColor1 =
-        --    U.updateLightColor 0.5 1 0.5
-        --lightColor2 =
-        --    U.updateLightColor 1 1 0.5
-        lightColor3 =
-            U.updateLightColor 1 0 0
+        lightColor1 =
+            U.updateLightColor 0.5 1 0.5
 
         camEye =
-            V3.vec3 0 0 -1
+            V3.vec3 0 0 -0.5
 
         camCenter =
             V3.vec3 0 0 0
@@ -235,7 +231,7 @@ view { theta, lightLocation, sphere, cube, pointer, size, zoom } =
             -- rotation
             (V3.vec3 0 0 0)
             lightLocation
-            lightColor3
+            lightColor1
             perspectiveFn
 
         -- sphere 1
