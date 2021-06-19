@@ -16,20 +16,6 @@ updateLightColor r g b =
     V3.vec3 r g b
 
 
-
---load3DObjectOLD : String -> (Result Http.Error String -> msg) -> Cmd msg
---load3DObjectOLD url m =
---    Http.request
---        { method = "GET"
---        , headers = []
---        , url = url
---        , body = Http.emptyBody
---        , expect = Http.expectString m
---        , timeout = Nothing
---        , tracker = Nothing
---        }
-
-
 load3DObject : String -> tp3d -> (tp3d -> Result Http.Error String -> msg) -> Cmd msg
 load3DObject url tp m =
     Http.request

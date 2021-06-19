@@ -13,11 +13,11 @@ import Model3D as M3D
 import ObjectFileDecoder as Obj3D
 import Utils as U
 import WebGL as GL
+import WebGL.Settings as GLS
 
 
 type Model3D
     = Sphere
-    | Cube
     | Room
     | Axis
 
@@ -39,7 +39,6 @@ type alias Model =
     , zoom : Float
     , objs3d :
         { sphere : Obj3D.Mesh
-        , cube : Obj3D.Mesh
         , room : Obj3D.Mesh
         , axis : Obj3D.Mesh
         }
@@ -67,13 +66,11 @@ init =
         { w = 400, h = 400 }
         2
         { sphere = Obj3D.empty
-        , cube = Obj3D.empty
         , room = Obj3D.empty
         , axis = Obj3D.empty
         }
     , Cmd.batch
         [ U.load3DObject "3d-models/sphere.txt" Sphere Model3DLoaded
-        , U.load3DObject "3d-models/cube.txt" Cube Model3DLoaded
         , U.load3DObject "3d-models/room.txt" Room Model3DLoaded
         , U.load3DObject "3d-models/axis.txt" Axis Model3DLoaded
         ]
@@ -141,9 +138,6 @@ update action model =
                             case model3d of
                                 Sphere ->
                                     { objs3d | sphere = obj3d }
-
-                                Cube ->
-                                    { objs3d | cube = obj3d }
 
                                 Room ->
                                     { objs3d | room = obj3d }
@@ -225,7 +219,10 @@ view : Model -> Html Msg
 view { theta, lightLocation, pointer, size, zoom, objs3d } =
     let
         lightColor1 =
-            U.updateLightColor 0.5 1 0.5
+            U.updateLightColor 0.3 0.3 0.3
+
+        lightColor2 =
+            U.updateLightColor 0.3 0.3 0.3
 
         camEye =
             V3.vec3 0 0 -0.5
@@ -248,10 +245,13 @@ view { theta, lightLocation, pointer, size, zoom, objs3d } =
         , onMouseMove PointerMoved
         , onMouseWheel ZoomChanged
         ]
-        [ -- pointer
+        [ -- cube/room
           M3D.render
+            [ GLS.cullFace GLS.front ]
             -- shape
-            objs3d.axis
+            objs3d.room
+            -- color
+            (V3.vec3 1 0 0)
             -- position
             (V3.vec3 pointer.x pointer.y zoom)
             -- scale
@@ -263,29 +263,19 @@ view { theta, lightLocation, pointer, size, zoom, objs3d } =
             perspectiveFn
 
         -- sphere 1
-        --, M3D.render
-        --    -- shape
-        --    sphere
-        --    -- position
-        --    (V3.vec3 -0.5 0 0)
-        --    -- scale
-        --    (V3.vec3 0.3 0.3 0.3)
-        --    -- rotation
-        --    (V3.vec3 0 0 0)
-        --    lightLocation
-        --    lightColor1
-        --    perspectiveFn
-        -- cube 1
-        --, M3D.render
-        --    -- shape
-        --    cube
-        --    -- position
-        --    (V3.vec3 0.5 0 0)
-        --    -- scale
-        --    (V3.vec3 0.3 0.3 0.3)
-        --    -- rotation
-        --    (V3.vec3 0 1 1)
-        --    lightLocation
-        --    lightColor2
-        --    perspectiveFn
+        , M3D.render
+            [ GLS.cullFace GLS.back ]
+            -- shape
+            objs3d.sphere
+            -- color
+            (V3.vec3 0 1 0)
+            -- position
+            (V3.vec3 pointer.x pointer.y zoom)
+            -- scale
+            (V3.vec3 0.2 0.2 0.2)
+            -- rotation
+            (V3.vec3 0 0 0)
+            lightLocation
+            lightColor2
+            perspectiveFn
         ]
