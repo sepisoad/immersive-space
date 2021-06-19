@@ -15,6 +15,20 @@ import Utils as U
 import WebGL as GL
 
 
+type Model3D
+    = Sphere
+    | Cube
+    | Room
+    | Axis
+
+
+type Msg
+    = Ticked
+    | Model3DLoaded Model3D (Result Http.Error String)
+    | PointerMoved Int Int
+    | ZoomChanged Float
+
+
 type alias Model =
     { theta : Float
     , lightLocation : V3.Vec3
@@ -23,15 +37,13 @@ type alias Model =
     , pointer : { x : Float, y : Float }
     , size : { w : Int, h : Int }
     , zoom : Float
+    , objs3d :
+        { sphere : Obj3D.Mesh
+        , cube : Obj3D.Mesh
+        , room : Obj3D.Mesh
+        , axis : Obj3D.Mesh
+        }
     }
-
-
-type Msg
-    = Ticked
-    | Sphere3DLoaded (Result Http.Error String)
-    | Cube3DLoaded (Result Http.Error String)
-    | PointerMoved Int Int
-    | ZoomChanged Float
 
 
 main : Program () Model Msg
@@ -54,9 +66,16 @@ init =
         { x = 0, y = 0 }
         { w = 400, h = 400 }
         2
+        { sphere = Obj3D.empty
+        , cube = Obj3D.empty
+        , room = Obj3D.empty
+        , axis = Obj3D.empty
+        }
     , Cmd.batch
-        [ U.load3DObject "3d-models/axis.txt" Sphere3DLoaded
-        , U.load3DObject "3d-models/cube.txt" Cube3DLoaded
+        [ U.load3DObject "3d-models/sphere.txt" Sphere Model3DLoaded
+        , U.load3DObject "3d-models/cube.txt" Cube Model3DLoaded
+        , U.load3DObject "3d-models/room.txt" Room Model3DLoaded
+        , U.load3DObject "3d-models/axis.txt" Axis Model3DLoaded
         ]
     )
 
@@ -104,26 +123,35 @@ update action model =
             in
             ( { model | theta = newTheta, lightLocation = lloc }, Cmd.none )
 
-        Sphere3DLoaded result ->
+        Model3DLoaded model3d result ->
+            let
+                log1_ =
+                    log "" model3d
+            in
             case result of
                 Ok object ->
                     let
                         obj3d =
                             Obj3D.load object
-                    in
-                    ( { model | sphere = obj3d }, Cmd.none )
 
-                Err _ ->
-                    ( model, Cmd.none )
+                        objs3d =
+                            model.objs3d
 
-        Cube3DLoaded result ->
-            case result of
-                Ok object ->
-                    let
-                        obj3d =
-                            Obj3D.load object
+                        newObjs3d =
+                            case model3d of
+                                Sphere ->
+                                    { objs3d | sphere = obj3d }
+
+                                Cube ->
+                                    { objs3d | cube = obj3d }
+
+                                Room ->
+                                    { objs3d | room = obj3d }
+
+                                Axis ->
+                                    { objs3d | axis = obj3d }
                     in
-                    ( { model | cube = obj3d }, Cmd.none )
+                    ( { model | objs3d = newObjs3d }, Cmd.none )
 
                 Err _ ->
                     ( model, Cmd.none )
@@ -194,7 +222,7 @@ onMouseWheel msg =
 
 
 view : Model -> Html Msg
-view { theta, lightLocation, sphere, cube, pointer, size, zoom } =
+view { theta, lightLocation, pointer, size, zoom, objs3d } =
     let
         lightColor1 =
             U.updateLightColor 0.5 1 0.5
@@ -223,7 +251,7 @@ view { theta, lightLocation, sphere, cube, pointer, size, zoom } =
         [ -- pointer
           M3D.render
             -- shape
-            sphere
+            objs3d.axis
             -- position
             (V3.vec3 pointer.x pointer.y zoom)
             -- scale
