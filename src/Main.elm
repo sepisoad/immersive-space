@@ -1,8 +1,11 @@
 module Main exposing (main)
 
 import Browser
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Events as BE exposing (onAnimationFrameDelta)
 import Debug exposing (..)
+import Element as UI
+import Element.Background as UIB
+import Element.Events as UIE
 import Html exposing (Attribute, Html)
 import Html.Attributes exposing (height, style, width)
 import Html.Events as HE
@@ -22,21 +25,39 @@ type Model3D
     | Axis
 
 
+type CameraPosition
+    = Top
+    | Front
+    | Side
+
+
+type CameraState
+    = RotatingTowards CameraPosition
+    | RestingAt CameraPosition
+
+
 type Msg
     = Ticked
+    | WindowResized Int Int
     | Model3DLoaded Model3D (Result Http.Error String)
     | PointerMoved Int Int
     | ZoomChanged Float
+    | MoveCamera CameraPosition
 
 
 type alias Model =
-    { theta : Float
-    , lightLocation : V3.Vec3
-    , sphere : Obj3D.Mesh
-    , cube : Obj3D.Mesh
+    { windowSize : { w : Int, h : Int }
     , pointer : { x : Float, y : Float }
-    , size : { w : Int, h : Int }
+    , lightLocation : V3.Vec3
+    , camera :
+        { state : CameraState
+        , eye : V3.Vec3
+        , eyeEx : V3.Vec3
+        , center : V3.Vec3
+        , up : V3.Vec3
+        }
     , zoom : Float
+    , theta : Float
     , objs3d :
         { sphere : Obj3D.Mesh
         , room : Obj3D.Mesh
@@ -45,26 +66,34 @@ type alias Model =
     }
 
 
-main : Program () Model Msg
+main : Program { w : Int, h : Int } Model Msg
 main =
     Browser.element
-        { init = \_ -> init
+        { init = init
         , view = view
         , subscriptions = subscriptions
         , update = update
         }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : { w : Int, h : Int } -> ( Model, Cmd Msg )
+init windowSize =
+    --let
+    --    log1_ =
+    --        log "" windowSize
+    --in
     ( Model
-        0.0
-        (U.updateLightLocation 1.3 1.3 1)
-        Obj3D.empty
-        Obj3D.empty
+        windowSize
         { x = 0, y = 0 }
-        { w = 400, h = 400 }
+        (U.updateLightLocation 1.3 1.3 1)
+        { state = RestingAt Front
+        , eye = V3.vec3 0 0 -5
+        , eyeEx = V3.vec3 0 0 -5
+        , center = V3.vec3 0 0 0
+        , up = V3.vec3 0 1 0
+        }
         2
+        0.0
         { sphere = Obj3D.empty
         , room = Obj3D.empty
         , axis = Obj3D.empty
@@ -79,7 +108,10 @@ init =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    onAnimationFrameDelta (\_ -> Ticked)
+    Sub.batch
+        [ onAnimationFrameDelta (\_ -> Ticked)
+        , BE.onResize WindowResized
+        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -94,37 +126,66 @@ update action model =
                     else
                         model.theta + 1
 
-                ll =
-                    U.updateLightLocation 1.3 1.3 1
+                cameraState =
+                    case camera.state of
+                        RotatingTowards pos ->
+                            case pos of
+                                Top ->
+                                    RotatingTowards Top
 
-                x =
-                    V3.getX ll
+                                Front ->
+                                    RotatingTowards Front
 
-                y =
-                    V3.getY ll
+                                Side ->
+                                    RotatingTowards Side
 
-                z =
-                    V3.getZ ll
+                        RestingAt pos ->
+                            RestingAt pos
 
-                newX =
-                    x * cos (U.degToRad newTheta) - (y * sin (U.degToRad newTheta))
+                sinTetha =
+                    sin (U.degToRad newTheta)
 
-                newY =
-                    y
+                cosTetha =
+                    cos (U.degToRad newTheta)
 
-                newZ =
-                    z * sin (U.degToRad newTheta) + (y * cos (U.degToRad newTheta))
+                camera =
+                    model.camera
 
-                lloc =
-                    V3.vec3 newX newY newZ
+                cameraEye =
+                    camera.eyeEx
+
+                camEyeX =
+                    V3.getX cameraEye
+
+                camEyeY =
+                    V3.getY cameraEye * cosTetha - (V3.getZ cameraEye * sinTetha)
+
+                camEyeZ =
+                    V3.getZ cameraEye * cosTetha + (V3.getY cameraEye * sinTetha)
+
+                newCameraEye =
+                    V3.vec3 camEyeX camEyeY camEyeZ
+
+                newCamera =
+                    { camera
+                        | state = cameraState
+                        , eye = newCameraEye
+                    }
+
+                --log1_ =
+                --    log "" ( camEyeY, camEyeZ )
             in
-            ( { model | theta = newTheta, lightLocation = lloc }, Cmd.none )
+            ( { model
+                | theta = newTheta
+                , camera = newCamera
+              }
+            , Cmd.none
+            )
+
+        WindowResized w h ->
+            ( { model | windowSize = { w = w, h = h } }, Cmd.none )
 
         Model3DLoaded model3d result ->
-            let
-                log1_ =
-                    log "" model3d
-            in
             case result of
                 Ok object ->
                     let
@@ -153,27 +214,25 @@ update action model =
         PointerMoved px py ->
             let
                 newX =
-                    ((toFloat -px * model.zoom) / toFloat model.size.w) + (model.zoom / 2)
+                    ((toFloat -px * model.zoom) / toFloat model.windowSize.w) + (model.zoom / 2)
 
                 newY =
-                    ((toFloat -py * model.zoom) / toFloat model.size.h) + (model.zoom / 2)
+                    ((toFloat -py * model.zoom) / toFloat model.windowSize.h) + (model.zoom / 2)
 
                 pointer =
                     { x = newX, y = newY }
             in
-            ( { model | pointer = pointer }, Cmd.none )
+            --( { model | pointer = pointer }, Cmd.none )
+            ( model, Cmd.none )
 
         ZoomChanged delta ->
             let
-                _ =
-                    log "" delta
-
                 zoom =
                     if delta >= 1 then
-                        model.zoom + 1
+                        model.zoom + 0.01
 
                     else if delta <= -1 then
-                        model.zoom - 1
+                        model.zoom - 0.01
 
                     else
                         model.zoom
@@ -189,6 +248,27 @@ update action model =
                         zoom
             in
             ( { model | zoom = capZoom }, Cmd.none )
+
+        MoveCamera pos ->
+            let
+                --towards =
+                --    case pos of
+                --        Front ->
+                --            ( model, Cmd.none )
+                --        Top ->
+                --            ( model, Cmd.none )
+                --        Side ->
+                --            ( model, Cmd.none )
+                camera =
+                    model.camera
+
+                newState =
+                    RotatingTowards pos
+
+                newCamera =
+                    { camera | state = newState }
+            in
+            ( { model | camera = newCamera }, Cmd.none )
 
 
 onMouseMove : (Int -> Int -> Msg) -> Attribute Msg
@@ -216,7 +296,34 @@ onMouseWheel msg =
 
 
 view : Model -> Html Msg
-view { theta, lightLocation, pointer, size, zoom, objs3d } =
+view model =
+    UI.layout
+        []
+        (UI.column
+            []
+            [ UI.row [ UI.spacing 5 ]
+                [ button "front" (MoveCamera Front)
+                , button "top" (MoveCamera Top)
+                , button "side" (MoveCamera Side)
+                ]
+            , UI.html (glView model)
+            ]
+        )
+
+
+button : String -> Msg -> UI.Element Msg
+button label msg =
+    UI.el
+        [ UI.padding 5
+        , UI.pointer
+        , UIB.color (UI.rgb 0.5 0.5 0.5)
+        , UIE.onClick msg
+        ]
+        (UI.text label)
+
+
+glView : Model -> Html Msg
+glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
     let
         lightColor1 =
             U.updateLightColor 0.3 0.3 0.3
@@ -224,24 +331,14 @@ view { theta, lightLocation, pointer, size, zoom, objs3d } =
         lightColor2 =
             U.updateLightColor 0.3 0.3 0.3
 
-        camEye =
-            V3.vec3 0 0 -0.5
-
-        camCenter =
-            V3.vec3 0 0 0
-
-        camUp =
-            V3.vec3 0 1 0
-
         perspectiveFn =
-            U.globalPerspective camEye camCenter camUp size.w size.h
+            U.globalPerspective camera.eye camera.center camera.up 1 1
     in
     GL.toHtml
-        [ width size.w
-        , height size.h
-        , style "display" "block"
-        , style "borderStyle" "solid"
-        , style "borderColor" "blue"
+        [ width windowSize.w
+        , height windowSize.h
+
+        --, style "border" "solid 0.2em"
         , onMouseMove PointerMoved
         , onMouseWheel ZoomChanged
         ]
@@ -253,7 +350,7 @@ view { theta, lightLocation, pointer, size, zoom, objs3d } =
             -- color
             (V3.vec3 1 0 0)
             -- position
-            (V3.vec3 pointer.x pointer.y zoom)
+            (V3.vec3 0 0 0)
             -- scale
             (V3.vec3 1 1 1)
             -- rotation
