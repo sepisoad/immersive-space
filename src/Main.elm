@@ -38,11 +38,7 @@ type CameraState
 
 type Msg
     = Ticked
-    | WindowResized Int Int
     | Model3DLoaded Model3D (Result Http.Error String)
-    | PointerMoved Int Int
-    | ZoomChanged Float
-    | MoveCamera CameraPosition
 
 
 type alias Model =
@@ -78,10 +74,6 @@ main =
 
 init : { w : Int, h : Int } -> ( Model, Cmd Msg )
 init windowSize =
-    --let
-    --    log1_ =
-    --        log "" windowSize
-    --in
     ( Model
         windowSize
         { x = 0, y = 0 }
@@ -109,9 +101,7 @@ init windowSize =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ onAnimationFrameDelta (\_ -> Ticked)
-        , BE.onResize WindowResized
-        ]
+        [ onAnimationFrameDelta (\_ -> Ticked) ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -157,30 +147,34 @@ update action model =
                 camEyeX =
                     V3.getX cameraEye
 
-                --V3.getX cameraEye * cosTetha - V3.getZ cameraEye * sinTetha
                 camEyeY =
-                    --V3.getY cameraEye
-                    V3.getY cameraEye * cosTetha + V3.getZ cameraEye * sinTetha
+                    (V3.getY cameraEye * cosTetha) - (V3.getZ cameraEye * sinTetha)
 
                 camEyeZ =
-                    --V3.getZ cameraEye
-                    V3.getY cameraEye * sinTetha + (V3.getZ cameraEye * cosTetha)
+                    (V3.getY cameraEye * sinTetha) + (V3.getZ cameraEye * cosTetha)
 
                 newCameraEye =
                     V3.vec3 camEyeX camEyeY camEyeZ
+
+                newCameraUp =
+                    if newTheta >= 0.0 && newTheta < 90.0 then
+                        V3.vec3 0 1 0
+
+                    else if newTheta >= 90.0 && newTheta < 180.0 then
+                        V3.vec3 0 0 1
+
+                    else if newTheta >= 180.0 && newTheta < 270.0 then
+                        V3.vec3 0 -1 0
+
+                    else
+                        V3.vec3 0 0 -1
 
                 newCamera =
                     { camera
                         | state = cameraState
                         , eye = newCameraEye
+                        , up = newCameraUp
                     }
-
-                log1_ =
-                    log "" ( sinTetha, cosTetha )
-
-                --log "" newTheta
-                --log "" ( newTheta, sinTetha )
-                --log "" ( newTheta, cosTetha )
             in
             ( { model
                 | theta = newTheta
@@ -188,9 +182,6 @@ update action model =
               }
             , Cmd.none
             )
-
-        WindowResized w h ->
-            ( { model | windowSize = { w = w, h = h } }, Cmd.none )
 
         Model3DLoaded model3d result ->
             case result of
@@ -218,89 +209,6 @@ update action model =
                 Err _ ->
                     ( model, Cmd.none )
 
-        PointerMoved px py ->
-            let
-                newX =
-                    ((toFloat -px * model.zoom) / toFloat model.windowSize.w) + (model.zoom / 2)
-
-                newY =
-                    ((toFloat -py * model.zoom) / toFloat model.windowSize.h) + (model.zoom / 2)
-
-                pointer =
-                    { x = newX, y = newY }
-            in
-            --( { model | pointer = pointer }, Cmd.none )
-            ( model, Cmd.none )
-
-        ZoomChanged delta ->
-            let
-                zoom =
-                    if delta >= 1 then
-                        model.zoom + 0.01
-
-                    else if delta <= -1 then
-                        model.zoom - 0.01
-
-                    else
-                        model.zoom
-
-                capZoom =
-                    if zoom > 20 then
-                        20
-
-                    else if zoom < 1 then
-                        1
-
-                    else
-                        zoom
-            in
-            ( { model | zoom = capZoom }, Cmd.none )
-
-        MoveCamera pos ->
-            let
-                --towards =
-                --    case pos of
-                --        Front ->
-                --            ( model, Cmd.none )
-                --        Top ->
-                --            ( model, Cmd.none )
-                --        Side ->
-                --            ( model, Cmd.none )
-                camera =
-                    model.camera
-
-                newState =
-                    RotatingTowards pos
-
-                newCamera =
-                    { camera | state = newState }
-            in
-            ( { model | camera = newCamera }, Cmd.none )
-
-
-onMouseMove : (Int -> Int -> Msg) -> Attribute Msg
-onMouseMove msg =
-    let
-        decoder =
-            JD.map2 msg
-                (JD.field "offsetX" JD.int)
-                (JD.field "offsetY" JD.int)
-    in
-    HE.on "mousemove" decoder
-
-
-onMouseWheel : (Float -> Msg) -> Attribute Msg
-onMouseWheel msg =
-    let
-        decoder =
-            JD.map msg
-                (JD.field "deltaY" JD.float)
-
-        attrMsg =
-            HE.on "wheel" decoder
-    in
-    attrMsg
-
 
 view : Model -> Html Msg
 view model =
@@ -308,13 +216,7 @@ view model =
         []
         (UI.column
             []
-            [ UI.row [ UI.spacing 5 ]
-                [ button "front" (MoveCamera Front)
-                , button "top" (MoveCamera Top)
-                , button "side" (MoveCamera Side)
-                ]
-            , UI.html (glView model)
-            ]
+            [ UI.html (glView model) ]
         )
 
 
@@ -335,25 +237,16 @@ glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
         lightColor1 =
             U.updateLightColor 0.5 0.5 0.5
 
-        lightColor2 =
-            U.updateLightColor 0.3 0.3 0.3
-
         perspectiveFn =
-            U.globalPerspective camera.eye camera.center camera.up 1 1
+            U.globalPerspective windowSize.w windowSize.h camera.eye camera.center camera.up
     in
     GL.toHtml
         [ width windowSize.w
         , height windowSize.h
-
-        --, style "border" "solid 0.2em"
-        , onMouseMove PointerMoved
-        , onMouseWheel ZoomChanged
         ]
         [ -- cube/room
           M3D.render
-            --[ GLS.cullFace GLS.back ]
-            -- shape
-            objs3d.axis
+            objs3d.room
             -- color
             (V3.vec3 1 1 0)
             -- position
@@ -365,21 +258,4 @@ glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
             lightLocation
             lightColor1
             perspectiveFn
-
-        ---- sphere 1
-        --, M3D.render
-        --    [ GLS.cullFace GLS.back ]
-        --    -- shape
-        --    objs3d.sphere
-        --    -- color
-        --    (V3.vec3 0 1 0)
-        --    -- position
-        --    (V3.vec3 pointer.x pointer.y zoom)
-        --    -- scale
-        --    (V3.vec3 0.2 0.2 0.2)
-        --    -- rotation
-        --    (V3.vec3 0 0 0)
-        --    lightLocation
-        --    lightColor2
-        --    perspectiveFn
         ]

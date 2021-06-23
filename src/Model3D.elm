@@ -12,8 +12,6 @@ import WebGL.Settings exposing (Setting)
 type alias Vertex =
     { position : Vec3
     , normal : Vec3
-
-    --, color : Vec3
     }
 
 
@@ -46,8 +44,6 @@ cretaeGLMesh mesh _ =
                         maybeNormal =
                             triangle.normal
 
-                        --maybeUV =
-                        --    triangle.uv
                         vertex =
                             case ( maybePosition, maybeNormal ) of
                                 ( Just pos, Just normal ) ->
@@ -115,20 +111,6 @@ render shape color position scale rotation lightLocation lightColor perspectiveF
             perspectiveFn position scale rotation
     in
     GL.entity
-        vertexShader
-        fragmentShader
-        (cretaeGLMesh shape position)
-        (Uniforms lightLocation lightColor color perspective)
-
-
-renderWithSettings : List Setting -> Obj3D.Mesh -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> (Vec3 -> Vec3 -> Vec3 -> Mat4) -> GL.Entity
-renderWithSettings settings shape color position scale rotation lightLocation lightColor perspectiveFn =
-    let
-        perspective =
-            perspectiveFn position scale rotation
-    in
-    GL.entityWith
-        settings
         vertexShader
         fragmentShader
         (cretaeGLMesh shape position)

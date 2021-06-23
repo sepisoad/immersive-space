@@ -29,22 +29,11 @@ load3DObject url tp m =
         }
 
 
-degToRad : Float -> Float
-degToRad deg =
-    deg * (pi / 180)
-
-
-globalPerspective : V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Int -> Int -> (V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> M4.Mat4)
-globalPerspective eye center up _ _ =
+globalPerspective : Int -> Int -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> (V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> M4.Mat4)
+globalPerspective width height eye center up =
     \position scale rotation ->
         List.foldr M4.mul
             M4.identity
-            [ M4.makePerspective 45 1 1 100
+            [ M4.makePerspective 45 (toFloat width / toFloat height) 0.01 100
             , M4.makeLookAt eye center up
-            , M4.makeTranslate position
-            , M4.makeScale scale
-
-            --, M4.makeRotate (V3.getX rotation) V3.i
-            --, M4.makeRotate (V3.getY rotation) V3.j
-            --, M4.makeRotate (V3.getZ rotation) V3.k
             ]
