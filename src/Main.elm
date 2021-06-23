@@ -120,7 +120,7 @@ update action model =
         Ticked ->
             let
                 newTheta =
-                    if (model.theta + 1) > 360 then
+                    if (model.theta + 1) >= 360 then
                         0
 
                     else
@@ -143,10 +143,10 @@ update action model =
                             RestingAt pos
 
                 sinTetha =
-                    sin (U.degToRad newTheta)
+                    sin (degrees newTheta)
 
                 cosTetha =
-                    cos (U.degToRad newTheta)
+                    cos (degrees newTheta)
 
                 camera =
                     model.camera
@@ -157,11 +157,14 @@ update action model =
                 camEyeX =
                     V3.getX cameraEye
 
+                --V3.getX cameraEye * cosTetha - V3.getZ cameraEye * sinTetha
                 camEyeY =
-                    V3.getY cameraEye * cosTetha - (V3.getZ cameraEye * sinTetha)
+                    --V3.getY cameraEye
+                    V3.getY cameraEye * cosTetha + V3.getZ cameraEye * sinTetha
 
                 camEyeZ =
-                    V3.getZ cameraEye * cosTetha + (V3.getY cameraEye * sinTetha)
+                    --V3.getZ cameraEye
+                    V3.getY cameraEye * sinTetha + (V3.getZ cameraEye * cosTetha)
 
                 newCameraEye =
                     V3.vec3 camEyeX camEyeY camEyeZ
@@ -172,8 +175,12 @@ update action model =
                         , eye = newCameraEye
                     }
 
-                --log1_ =
-                --    log "" ( camEyeY, camEyeZ )
+                log1_ =
+                    log "" ( sinTetha, cosTetha )
+
+                --log "" newTheta
+                --log "" ( newTheta, sinTetha )
+                --log "" ( newTheta, cosTetha )
             in
             ( { model
                 | theta = newTheta
@@ -326,7 +333,7 @@ glView : Model -> Html Msg
 glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
     let
         lightColor1 =
-            U.updateLightColor 0.3 0.3 0.3
+            U.updateLightColor 0.5 0.5 0.5
 
         lightColor2 =
             U.updateLightColor 0.3 0.3 0.3
@@ -344,11 +351,11 @@ glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
         ]
         [ -- cube/room
           M3D.render
-            [ GLS.cullFace GLS.front ]
+            --[ GLS.cullFace GLS.back ]
             -- shape
-            objs3d.room
+            objs3d.axis
             -- color
-            (V3.vec3 1 0 0)
+            (V3.vec3 1 1 0)
             -- position
             (V3.vec3 0 0 0)
             -- scale
@@ -359,20 +366,20 @@ glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
             lightColor1
             perspectiveFn
 
-        -- sphere 1
-        , M3D.render
-            [ GLS.cullFace GLS.back ]
-            -- shape
-            objs3d.sphere
-            -- color
-            (V3.vec3 0 1 0)
-            -- position
-            (V3.vec3 pointer.x pointer.y zoom)
-            -- scale
-            (V3.vec3 0.2 0.2 0.2)
-            -- rotation
-            (V3.vec3 0 0 0)
-            lightLocation
-            lightColor2
-            perspectiveFn
+        ---- sphere 1
+        --, M3D.render
+        --    [ GLS.cullFace GLS.back ]
+        --    -- shape
+        --    objs3d.sphere
+        --    -- color
+        --    (V3.vec3 0 1 0)
+        --    -- position
+        --    (V3.vec3 pointer.x pointer.y zoom)
+        --    -- scale
+        --    (V3.vec3 0.2 0.2 0.2)
+        --    -- rotation
+        --    (V3.vec3 0 0 0)
+        --    lightLocation
+        --    lightColor2
+        --    perspectiveFn
         ]

@@ -108,8 +108,21 @@ fragmentShader =
     |]
 
 
-render : List Setting -> Obj3D.Mesh -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> (Vec3 -> Vec3 -> Vec3 -> Mat4) -> GL.Entity
-render settings shape color position scale rotation lightLocation lightColor perspectiveFn =
+render : Obj3D.Mesh -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> (Vec3 -> Vec3 -> Vec3 -> Mat4) -> GL.Entity
+render shape color position scale rotation lightLocation lightColor perspectiveFn =
+    let
+        perspective =
+            perspectiveFn position scale rotation
+    in
+    GL.entity
+        vertexShader
+        fragmentShader
+        (cretaeGLMesh shape position)
+        (Uniforms lightLocation lightColor color perspective)
+
+
+renderWithSettings : List Setting -> Obj3D.Mesh -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> (Vec3 -> Vec3 -> Vec3 -> Mat4) -> GL.Entity
+renderWithSettings settings shape color position scale rotation lightLocation lightColor perspectiveFn =
     let
         perspective =
             perspectiveFn position scale rotation

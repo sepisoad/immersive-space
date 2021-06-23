@@ -39,11 +39,12 @@ globalPerspective eye center up _ _ =
     \position scale rotation ->
         List.foldr M4.mul
             M4.identity
-            [ M4.makePerspective 45 1 0.01 100
+            [ M4.makePerspective 45 1 1 100
             , M4.makeLookAt eye center up
             , M4.makeTranslate position
             , M4.makeScale scale
-            , M4.makeRotate (V3.getX rotation) V3.i
-            , M4.makeRotate (V3.getY rotation) V3.j
-            , M4.makeRotate (V3.getZ rotation) V3.k
+
+            --, M4.makeRotate (V3.getX rotation) V3.i
+            --, M4.makeRotate (V3.getY rotation) V3.j
+            --, M4.makeRotate (V3.getZ rotation) V3.k
             ]
