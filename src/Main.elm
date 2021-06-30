@@ -26,9 +26,9 @@ type Model3D
 
 
 type CameraPosition
-    = Top
-    | Front
-    | Side
+    = CameraPositionTop
+    | CameraPositionFront
+    | CameraPositionSide
 
 
 type CameraState
@@ -39,19 +39,23 @@ type CameraState
 type Msg
     = Ticked
     | Model3DLoaded Model3D (Result Http.Error String)
+    | ChangeCameraPosition CameraPosition
+
+
+type alias Camera =
+    { state : CameraState
+    , eye : V3.Vec3
+    , eyeNew : V3.Vec3
+    , center : V3.Vec3
+    , up : V3.Vec3
+    }
 
 
 type alias Model =
     { windowSize : { w : Int, h : Int }
     , pointer : { x : Float, y : Float }
     , lightLocation : V3.Vec3
-    , camera :
-        { state : CameraState
-        , eye : V3.Vec3
-        , eyeEx : V3.Vec3
-        , center : V3.Vec3
-        , up : V3.Vec3
-        }
+    , camera : Camera
     , zoom : Float
     , theta : Float
     , objs3d :
@@ -59,6 +63,16 @@ type alias Model =
         , room : Obj3D.Mesh
         , axis : Obj3D.Mesh
         }
+    }
+
+
+initCamera : Camera
+initCamera =
+    { state = RestingAt CameraPositionFront
+    , eye = V3.vec3 0 0 -5
+    , eyeNew = V3.vec3 0 0 -5
+    , center = V3.vec3 0 0 0
+    , up = V3.vec3 0 1 0
     }
 
 
@@ -78,12 +92,7 @@ init windowSize =
         windowSize
         { x = 0, y = 0 }
         (U.updateLightLocation 1.3 1.3 1)
-        { state = RestingAt Front
-        , eye = V3.vec3 0 0 -5
-        , eyeEx = V3.vec3 0 0 -5
-        , center = V3.vec3 0 0 0
-        , up = V3.vec3 0 1 0
-        }
+        initCamera
         2
         0.0
         { sphere = Obj3D.empty
@@ -104,85 +113,99 @@ subscriptions _ =
         [ onAnimationFrameDelta (\_ -> Ticked) ]
 
 
+rotateCameraToFront : Float -> Float -> Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Camera
+rotateCameraToFront theta sinTetha cosTetha eye center up =
+    let
+        x =
+            (V3.getX eye * cosTetha) + (V3.getZ eye * sinTetha)
+
+        y =
+            V3.getY eye
+
+        z =
+            (V3.getX eye * sinTetha) - (V3.getZ eye * cosTetha)
+
+        newEye =
+            V3.vec3 x y z
+
+        ( newUp, newState ) =
+            if theta >= 0.0 && theta < 90.0 then
+                ( V3.vec3 0 1 0, RotatingTowards CameraPositionFront )
+
+            else
+                ( V3.vec3 0 1 0, RestingAt CameraPositionFront )
+    in
+    { state = newState
+    , eye = eye
+    , eyeNew = newEye
+    , center = center
+    , up = newUp
+    }
+
+
+rotateCameraToTop : Float -> Float -> Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Camera
+rotateCameraToTop theta sinTetha cosTetha eye center up =
+    let
+        x =
+            V3.getX eye
+
+        y =
+            (V3.getY eye * cosTetha) - (V3.getZ eye * sinTetha)
+
+        z =
+            (V3.getY eye * sinTetha) + (V3.getZ eye * cosTetha)
+
+        newEye =
+            V3.vec3 x y z
+
+        ( newUp, newState ) =
+            if theta >= 0.0 && theta < 90.0 then
+                ( V3.vec3 0 1 0, RotatingTowards CameraPositionTop )
+
+            else
+                ( V3.vec3 0 0 1, RestingAt CameraPositionTop )
+    in
+    { state = newState
+    , eye = eye
+    , eyeNew = newEye
+    , center = center
+    , up = newUp
+    }
+
+
+rotateCameraToSide : Float -> Float -> Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Camera
+rotateCameraToSide theta sinTetha cosTetha eye center up =
+    let
+        x =
+            (V3.getX eye * cosTetha) - (V3.getZ eye * sinTetha)
+
+        y =
+            V3.getY eye
+
+        z =
+            (V3.getX eye * sinTetha) + (V3.getZ eye * cosTetha)
+
+        newEye =
+            V3.vec3 x y z
+
+        ( newUp, newState ) =
+            if theta >= 0.0 && theta < 90.0 then
+                ( V3.vec3 0 1 0, RotatingTowards CameraPositionSide )
+
+            else
+                ( V3.vec3 0 1 0, RestingAt CameraPositionSide )
+    in
+    { state = newState
+    , eye = eye
+    , eyeNew = newEye
+    , center = center
+    , up = newUp
+    }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
-        Ticked ->
-            let
-                newTheta =
-                    if (model.theta + 1) >= 360 then
-                        0
-
-                    else
-                        model.theta + 1
-
-                cameraState =
-                    case camera.state of
-                        RotatingTowards pos ->
-                            case pos of
-                                Top ->
-                                    RotatingTowards Top
-
-                                Front ->
-                                    RotatingTowards Front
-
-                                Side ->
-                                    RotatingTowards Side
-
-                        RestingAt pos ->
-                            RestingAt pos
-
-                sinTetha =
-                    sin (degrees newTheta)
-
-                cosTetha =
-                    cos (degrees newTheta)
-
-                camera =
-                    model.camera
-
-                cameraEye =
-                    camera.eyeEx
-
-                camEyeX =
-                    V3.getX cameraEye
-
-                camEyeY =
-                    (V3.getY cameraEye * cosTetha) - (V3.getZ cameraEye * sinTetha)
-
-                camEyeZ =
-                    (V3.getY cameraEye * sinTetha) + (V3.getZ cameraEye * cosTetha)
-
-                newCameraEye =
-                    V3.vec3 camEyeX camEyeY camEyeZ
-
-                newCameraUp =
-                    if newTheta >= 0.0 && newTheta < 90.0 then
-                        V3.vec3 0 1 0
-
-                    else if newTheta >= 90.0 && newTheta < 180.0 then
-                        V3.vec3 0 0 1
-
-                    else if newTheta >= 180.0 && newTheta < 270.0 then
-                        V3.vec3 0 -1 0
-
-                    else
-                        V3.vec3 0 0 -1
-
-                newCamera =
-                    { camera
-                        | state = cameraState
-                        , eye = newCameraEye
-                        , up = newCameraUp
-                    }
-            in
-            ( { model
-                | theta = newTheta
-                , camera = newCamera
-              }
-            , Cmd.none
-            )
-
         Model3DLoaded model3d result ->
             case result of
                 Ok object ->
@@ -209,6 +232,61 @@ update action model =
                 Err _ ->
                     ( model, Cmd.none )
 
+        ChangeCameraPosition newPosition ->
+            let
+                camera =
+                    model.camera
+
+                newCamera =
+                    { camera | state = RotatingTowards newPosition }
+
+                log1_ =
+                    log "" newCamera
+            in
+            ( { model | camera = newCamera, theta = 0 }, Cmd.none )
+
+        Ticked ->
+            let
+                newTheta =
+                    if (model.theta + 1) >= 360 then
+                        0
+
+                    else
+                        model.theta + 1
+
+                sinTetha =
+                    sin (degrees newTheta)
+
+                cosTetha =
+                    cos (degrees newTheta)
+
+                newCamera =
+                    case model.camera.state of
+                        RotatingTowards pos ->
+                            let
+                                { eye, center, up } =
+                                    model.camera
+                            in
+                            case pos of
+                                CameraPositionTop ->
+                                    rotateCameraToTop newTheta sinTetha cosTetha eye center up
+
+                                CameraPositionFront ->
+                                    rotateCameraToFront newTheta sinTetha cosTetha eye center up
+
+                                CameraPositionSide ->
+                                    rotateCameraToSide newTheta sinTetha cosTetha eye center up
+
+                        RestingAt pos ->
+                            model.camera
+            in
+            ( { model
+                | theta = newTheta
+                , camera = newCamera
+              }
+            , Cmd.none
+            )
+
 
 view : Model -> Html Msg
 view model =
@@ -216,7 +294,14 @@ view model =
         []
         (UI.column
             []
-            [ UI.html (glView model) ]
+            [ UI.row
+                [ UI.spacing 5 ]
+                [ button "front" (ChangeCameraPosition CameraPositionFront)
+                , button "top" (ChangeCameraPosition CameraPositionTop)
+                , button "side" (ChangeCameraPosition CameraPositionSide)
+                ]
+            , UI.html (glView model)
+            ]
         )
 
 
@@ -238,7 +323,7 @@ glView { theta, lightLocation, pointer, windowSize, zoom, objs3d, camera } =
             U.updateLightColor 0.5 0.5 0.5
 
         perspectiveFn =
-            U.globalPerspective windowSize.w windowSize.h camera.eye camera.center camera.up
+            U.globalPerspective windowSize.w windowSize.h camera.eyeNew camera.center camera.up
     in
     GL.toHtml
         [ width windowSize.w
