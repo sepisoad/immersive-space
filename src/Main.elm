@@ -44,6 +44,7 @@ type Msg
 
 type alias Camera =
     { state : CameraState
+    , stateOld : CameraState
     , eye : V3.Vec3
     , eyeNew : V3.Vec3
     , center : V3.Vec3
@@ -69,6 +70,7 @@ type alias Model =
 initCamera : Camera
 initCamera =
     { state = RestingAt CameraPositionFront
+    , stateOld = RestingAt CameraPositionFront
     , eye = V3.vec3 0 0 -5
     , eyeNew = V3.vec3 0 0 -5
     , center = V3.vec3 0 0 0
@@ -113,94 +115,172 @@ subscriptions _ =
         [ onAnimationFrameDelta (\_ -> Ticked) ]
 
 
-rotateCameraToFront : Float -> Float -> Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Camera
-rotateCameraToFront theta sinTetha cosTetha eye center up =
+rotateCameraToFrontFromSide : Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> ( Camera, Float )
+rotateCameraToFrontFromSide theta eye center up =
     let
+        newTheta =
+            theta + 1
+
+        sinTheta =
+            sin (degrees newTheta)
+
+        cosTheta =
+            cos (degrees newTheta)
+
         x =
-            (V3.getX eye * cosTetha) + (V3.getZ eye * sinTetha)
+            (V3.getX eye * cosTheta) + (V3.getZ eye * sinTheta)
 
         y =
             V3.getY eye
 
         z =
-            (V3.getX eye * sinTetha) - (V3.getZ eye * cosTetha)
+            (V3.getX eye * sinTheta) - (V3.getZ eye * cosTheta)
 
         newEye =
             V3.vec3 x y z
 
-        ( newUp, newState ) =
-            if theta >= 0.0 && theta < 90.0 then
-                ( V3.vec3 0 1 0, RotatingTowards CameraPositionFront )
+        ( newUp, stateNew, stateOld ) =
+            if newTheta >= 0.0 && newTheta < 90.0 then
+                ( V3.vec3 0 1 0, RotatingTowards CameraPositionFront, RestingAt CameraPositionSide )
 
             else
-                ( V3.vec3 0 1 0, RestingAt CameraPositionFront )
+                ( V3.vec3 0 1 0, RestingAt CameraPositionFront, RestingAt CameraPositionFront )
     in
-    { state = newState
-    , eye = eye
-    , eyeNew = newEye
-    , center = center
-    , up = newUp
-    }
+    ( { state = stateNew
+      , stateOld = stateOld
+      , eye = eye
+      , eyeNew = newEye
+      , center = center
+      , up = newUp
+      }
+    , newTheta
+    )
 
 
-rotateCameraToTop : Float -> Float -> Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Camera
-rotateCameraToTop theta sinTetha cosTetha eye center up =
+rotateCameraToFrontFromTop : Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> ( Camera, Float )
+rotateCameraToFrontFromTop theta eye center up =
     let
+        newTheta =
+            theta - 1
+
+        sinTheta =
+            sin (degrees newTheta)
+
+        cosTheta =
+            cos (degrees newTheta)
+
         x =
             V3.getX eye
 
         y =
-            (V3.getY eye * cosTetha) - (V3.getZ eye * sinTetha)
+            (V3.getY eye * cosTheta) - (V3.getZ eye * sinTheta)
 
         z =
-            (V3.getY eye * sinTetha) + (V3.getZ eye * cosTetha)
+            (V3.getY eye * sinTheta) + (V3.getZ eye * cosTheta)
 
         newEye =
             V3.vec3 x y z
 
-        ( newUp, newState ) =
-            if theta >= 0.0 && theta < 90.0 then
-                ( V3.vec3 0 1 0, RotatingTowards CameraPositionTop )
+        ( eyeEx, newUp, ( stateNew, stateOld ) ) =
+            if newTheta <= 90 && newTheta > 0.0 then
+                ( eye, V3.vec3 0 0 1, ( RotatingTowards CameraPositionFront, RotatingTowards CameraPositionTop ) )
 
             else
-                ( V3.vec3 0 0 1, RestingAt CameraPositionTop )
+                ( newEye, V3.vec3 0 1 0, ( RestingAt CameraPositionFront, RestingAt CameraPositionFront ) )
     in
-    { state = newState
-    , eye = eye
-    , eyeNew = newEye
-    , center = center
-    , up = newUp
-    }
+    ( { state = stateNew
+      , stateOld = stateOld
+      , eye = eye
+      , eyeNew = newEye
+      , center = center
+      , up = newUp
+      }
+    , newTheta
+    )
 
 
-rotateCameraToSide : Float -> Float -> Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> Camera
-rotateCameraToSide theta sinTetha cosTetha eye center up =
+rotateCameraToTop : Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> ( Camera, Float )
+rotateCameraToTop theta eye center up =
     let
+        newTheta =
+            theta + 1
+
+        sinTheta =
+            sin (degrees newTheta)
+
+        cosTheta =
+            cos (degrees newTheta)
+
         x =
-            (V3.getX eye * cosTetha) - (V3.getZ eye * sinTetha)
+            V3.getX eye
+
+        y =
+            (V3.getY eye * cosTheta) - (V3.getZ eye * sinTheta)
+
+        z =
+            (V3.getY eye * sinTheta) + (V3.getZ eye * cosTheta)
+
+        newEye =
+            V3.vec3 x y z
+
+        ( eyeEx, newUp, stateNew ) =
+            if newTheta >= 0.0 && newTheta < 90.0 then
+                ( eye, V3.vec3 0 1 0, RotatingTowards CameraPositionTop )
+
+            else
+                ( newEye, V3.vec3 0 0 1, RestingAt CameraPositionTop )
+    in
+    ( { state = stateNew
+      , stateOld = stateNew
+      , eye = eye
+      , eyeNew = newEye
+      , center = center
+      , up = newUp
+      }
+    , newTheta
+    )
+
+
+rotateCameraToSide : Float -> V3.Vec3 -> V3.Vec3 -> V3.Vec3 -> ( Camera, Float )
+rotateCameraToSide theta eye center up =
+    let
+        newTheta =
+            theta + 1
+
+        sinTheta =
+            sin (degrees newTheta)
+
+        cosTheta =
+            cos (degrees newTheta)
+
+        x =
+            (V3.getX eye * cosTheta) - (V3.getZ eye * sinTheta)
 
         y =
             V3.getY eye
 
         z =
-            (V3.getX eye * sinTetha) + (V3.getZ eye * cosTetha)
+            (V3.getX eye * sinTheta) + (V3.getZ eye * cosTheta)
 
         newEye =
             V3.vec3 x y z
 
-        ( newUp, newState ) =
-            if theta >= 0.0 && theta < 90.0 then
-                ( V3.vec3 0 1 0, RotatingTowards CameraPositionSide )
+        ( eyeEx, newUp, stateNew ) =
+            if newTheta >= 0.0 && newTheta < 90.0 then
+                ( eye, V3.vec3 0 1 0, RotatingTowards CameraPositionSide )
 
             else
-                ( V3.vec3 0 1 0, RestingAt CameraPositionSide )
+                ( newEye, V3.vec3 0 1 0, RestingAt CameraPositionSide )
     in
-    { state = newState
-    , eye = eye
-    , eyeNew = newEye
-    , center = center
-    , up = newUp
-    }
+    ( { state = stateNew
+      , stateOld = stateNew
+      , eye = eyeEx
+      , eyeNew = newEye
+      , center = center
+      , up = newUp
+      }
+    , newTheta
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -232,56 +312,71 @@ update action model =
                 Err _ ->
                     ( model, Cmd.none )
 
-        ChangeCameraPosition newPosition ->
+        ChangeCameraPosition newPos ->
             let
                 camera =
                     model.camera
 
                 newCamera =
-                    { camera | state = RotatingTowards newPosition }
-
-                log1_ =
-                    log "" newCamera
+                    { camera | state = RotatingTowards newPos }
             in
-            ( { model | camera = newCamera, theta = 0 }, Cmd.none )
+            case camera.state of
+                RotatingTowards _ ->
+                    ( model, Cmd.none )
+
+                RestingAt pos ->
+                    if pos /= newPos then
+                        ( { model | camera = newCamera }, Cmd.none )
+
+                    else
+                        ( model, Cmd.none )
 
         Ticked ->
             let
-                newTheta =
-                    if (model.theta + 1) >= 360 then
-                        0
-
-                    else
-                        model.theta + 1
-
-                sinTetha =
-                    sin (degrees newTheta)
-
-                cosTetha =
-                    cos (degrees newTheta)
-
-                newCamera =
+                ( newCamera, thetaNew ) =
                     case model.camera.state of
                         RotatingTowards pos ->
                             let
-                                { eye, center, up } =
+                                { eye, center, up, state, stateOld } =
                                     model.camera
+
+                                oldPos =
+                                    case stateOld of
+                                        RotatingTowards p ->
+                                            p
+
+                                        RestingAt p ->
+                                            p
+
+                                theta =
+                                    model.theta
+
+                                log1_ =
+                                    log "" ( pos, oldPos )
                             in
                             case pos of
                                 CameraPositionTop ->
-                                    rotateCameraToTop newTheta sinTetha cosTetha eye center up
+                                    rotateCameraToTop theta eye center up
 
                                 CameraPositionFront ->
-                                    rotateCameraToFront newTheta sinTetha cosTetha eye center up
+                                    case oldPos of
+                                        CameraPositionSide ->
+                                            rotateCameraToFrontFromSide model.theta eye center up
+
+                                        CameraPositionTop ->
+                                            rotateCameraToFrontFromTop model.theta eye center up
+
+                                        _ ->
+                                            ( model.camera, model.theta )
 
                                 CameraPositionSide ->
-                                    rotateCameraToSide newTheta sinTetha cosTetha eye center up
+                                    rotateCameraToSide theta eye center up
 
                         RestingAt pos ->
-                            model.camera
+                            ( model.camera, model.theta )
             in
             ( { model
-                | theta = newTheta
+                | theta = thetaNew
                 , camera = newCamera
               }
             , Cmd.none
